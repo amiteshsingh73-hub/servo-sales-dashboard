@@ -5,7 +5,8 @@ import os, shutil, sys, tempfile
 from pathlib import Path
 import pandas as pd
 
-SRC = Path(os.environ.get("SALES_DATA_DIR", Path(__file__).resolve().parent.parent))
+_root = Path(__file__).resolve().parent.parent
+SRC = Path(os.environ.get("SALES_DATA_DIR", _root / "Data" if (_root / "Data").is_dir() else _root))
 tmp = Path(tempfile.mkdtemp())
 for pat in ("Primary Sales*.XLSX", "Secondary Sales*.xlsx", "Target File*.xlsx"):
     for f in SRC.glob(pat): shutil.copy(f, tmp / f.name)
