@@ -1,0 +1,18 @@
+# --- never commit company sales data or generated decks ---
+*.xlsx
+*.xlsm
+*.xls
+*.XLSX
+*.csv
+*.pptx
+*.pdf
+exports/
+Data/
+# --- local environment ---
+.venv/
+.cache/
+__pycache__/
+*.pyc
+.DS_Store
+*_backup_*.py
+.claude/
