@@ -8,7 +8,7 @@
 5. Review, then use **PPT Studio** to download the HO-template deck.
 
 ## Once a year (April): roll over the year
-- `hodash/config.py` -> `TARGET_SHEET` is currently `"FY2526 Base Target"`. When the new year's target block sheet exists in the Target workbook, change the name here. If targets look wrong or stale, this is the first thing to check.
+- `hodash/config.py` -> `TARGET_SHEET` is `"FY2526 Base Target"`. Checked 20-Oct-2026: despite its name, that sheet holds the **FY 26-27** targets (FY25-26 sales as "BASE", months Apr'26-Mar'27), so it is correct for this year. Next April, point it at whichever sheet holds the FY 27-28 blocks.
 - Replace `HO PPT format LSE STANDARD TEMPLATE ....pptx` in `Data/` with the new template.
 - `STOCKIST_ALIASES`, `CHANNEL_MAP`, `PACK_GROUPS`: edit in `hodash/config.py` when a stockist, customer group or pack size is added.
 
