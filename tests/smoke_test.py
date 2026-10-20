@@ -1,5 +1,5 @@
 """Crash test: renders every tab of the dashboard headless under many period / filter combinations.
-Run:  .venv/bin/python tests/smoke_test.py          (uses your real data folder, read-only)
+Run:  ~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py          (uses your real data folder, read-only)
 Exit code 0 = no tab raised an error in any scenario.
 """
 import os, sys, time

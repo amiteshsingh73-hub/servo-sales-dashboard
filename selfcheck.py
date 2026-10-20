@@ -1,5 +1,5 @@
 """Safety check: simulates messy file drops in a temporary copy of your folder and confirms the dashboard copes.
-Run:  .venv/bin/python selfcheck.py       (your real files are only read, never changed)
+Run:  ~/.local/venvs/sales_review_ho/bin/python selfcheck.py       (your real files are only read, never changed)
 """
 import os, shutil, sys, tempfile
 from pathlib import Path

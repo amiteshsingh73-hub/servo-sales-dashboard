@@ -16,13 +16,13 @@ Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel 
 | 🎯 Schemes · 📑 PPT Studio · 🗂️ Data & checks | incentive calculator, PPTX/Excel export, file and data checks |
 
 ## Tests
-- `.venv/bin/python selfcheck.py` - messy file drops (title rows, serial dates, corrupt/locked files).
-- `.venv/bin/python tests/smoke_test.py` - renders every tab headless under 15 period / filter combinations and fails if any section errors.
+- `~/.local/venvs/sales_review_ho/bin/python selfcheck.py` - messy file drops (title rows, serial dates, corrupt/locked files).
+- `~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py` - renders every tab headless under 15 period / filter combinations and fails if any section errors.
 
 Every tab runs inside a guard (`hodash/ui.py`): if one section hits unexpected data it shows a small notice and the rest of the dashboard keeps working.
 
 
-Start: double-click `run_dashboard.command` (or `.venv/bin/streamlit run app.py`).
+Start: double-click `run_dashboard.command` (or `~/.local/venvs/sales_review_ho/bin/streamlit run app.py`).
 
 - Watches the **Sales Review** folder (change in `hodash/config.py` or env `SALES_DATA_DIR`).
 - Drop `Primary*.xlsx` / `Secondary*.xlsx` (monthly or full-year). Overlapping months never double count; the file with the latest invoice date for a month wins. Page refreshes itself within ~20s.
@@ -40,4 +40,4 @@ Start: double-click `run_dashboard.command` (or `.venv/bin/streamlit run app.py`
 No AI service, internet call or cloud dependency at runtime: only Python libraries (streamlit, pandas, plotly, python-pptx, openpyxl, python-calamine) reading your local Excel files.
 
 ## If something looks wrong
-Run `.venv/bin/python selfcheck.py` - it simulates messy drops (extra pivot sheets, title rows, text/serial dates, corrupt or locked files) on a temporary copy and reports PASS/FAIL. Unreadable files are skipped and listed as warnings on the dashboard instead of stopping it.
+Run `~/.local/venvs/sales_review_ho/bin/python selfcheck.py` - it simulates messy drops (extra pivot sheets, title rows, text/serial dates, corrupt or locked files) on a temporary copy and reports PASS/FAIL. Unreadable files are skipped and listed as warnings on the dashboard instead of stopping it.

@@ -1,5 +1,5 @@
 """Servo sales dashboard - Primary & Secondary performance, built for HO-template PPTs.
-Run:  ./run_dashboard.command   (or  .venv/bin/streamlit run app.py)
+Run:  ./run_dashboard.command   (or  ~/.local/venvs/sales_review_ho/bin/streamlit run app.py)
 """
 import glob, io, time
 import numpy as np

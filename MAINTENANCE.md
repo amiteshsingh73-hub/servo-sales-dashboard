@@ -27,23 +27,26 @@
 ## Health checks (run after ANY change or after a Python/library update)
 ```
 cd "Sales Review/sales_dashboard"
-.venv/bin/python selfcheck.py          # messy-file handling, should end ALL CHECKS PASSED
-.venv/bin/python tests/smoke_test.py   # renders every tab, ~2 min, should end ALL SCENARIOS PASSED
+~/.local/venvs/sales_review_ho/bin/python selfcheck.py          # messy-file handling, should end ALL CHECKS PASSED
+~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py   # renders every tab, ~2 min, should end ALL SCENARIOS PASSED
 ```
 Last verified: 19-Oct-2026, both passed.
+
+## Where the Python environment lives
+`~/.local/venvs/sales_review_ho` (outside OneDrive on purpose: ~15,000 small files in the folder made OneDrive and Spotlight slow the Mac). The launchers create it automatically on first run if missing. It is rebuilt from `requirements.txt`; nothing in it is precious.
 
 ## If it will not start
 - Look at `Sales Review/logs/sales_dashboard.log` (last lines show the error).
 - Rebuild the environment (safe, data is untouched):
   ```
-  cd "Sales Review/sales_dashboard"; rm -rf .venv
-  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+  cd "Sales Review/sales_dashboard"; rm -rf ~/.local/venvs/sales_review_ho
+  python3 -m venv ~/.local/venvs/sales_review_ho && ~/.local/venvs/sales_review_ho/bin/pip install -r requirements.txt
   ```
 - Python 3.11 is required (install from python.org if the Mac has been replaced).
 - A tab shows "section hit unexpected data": a file layout changed. Compare the column names with `loader.py`; selfcheck helps isolate it.
 
 ## Backups
-- Double-click `backup.command`: zips everything (except the rebuildable `.venv`) into `~/Documents/SalesReview_Backups/`. Do this monthly and before editing code.
+- Double-click `backup.command`: zips everything (the Python environment is not in the folder at all) into `~/Documents/SalesReview_Backups/`. Do this monthly and before editing code.
 - Code is also under git (`git log`, `git checkout <file>` restores a file). Sales data is deliberately not in git.
 - OneDrive keeps version history for the Data files (right-click -> Version history).
 
