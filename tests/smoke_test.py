@@ -22,6 +22,8 @@ def scenarios():
     yield "rare product group", {"sl_product_group": "rarest"}
     yield "stockist + OEM", {"sl_stockist": "last", "sl_channel": ["OEM"]}
     yield "pack + category", {"sl_pack_group": "rarest", "sl_category": "rarest"}
+    yield "premium tab: rare segment", {"pr_seg": "rarest"}
+    yield "premium tab: one customer + stockist", {"pr_cust": "first", "pr_stk": "last"}
 
 
 def apply(at, sc):
