@@ -9,6 +9,7 @@ Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel 
 |---|---|
 | 🏠 Overview | KPI cards with trend sparklines, target tracker (primary / secondary / Bazaar / RO / OEM), channel cards, auto-written highlights |
 | 🛒 Bazaar | Counter health (new / reactivated / growing / declining / lost), dormant-counter call list, counter tiers, SSF scorecard, sub-group & district, product / category / pack mix, cross-sell gaps, top counters, counter 360° |
+| 📋 LRS Format | LRS Field Sales Analysis sheet per SSR (stockist) for any month: month & cumulative potential / target / CY / LY, secondary by outlet type. Excel download per SSR, all SSRs in one workbook, or a ZIP of separate files. Potential comes from `Data/SSR Potential.xlsx` (optional) |
 | 🏭 Primary / 🚚 Secondary | HO-template tables and charts |
 | ⚖️ Primary vs Secondary | stock build at stockists |
 | 💡 Insights | volume bridge, run-rate to target, achievement heat-map, counter & product movers, realisation |

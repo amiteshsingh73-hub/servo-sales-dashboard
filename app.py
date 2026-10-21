@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from hodash import config as C, loader, metrics as M, ho_tables as H, pptx_export as X, pivot as PV, scheme_ui, ui, bazaar_ui
+from hodash import config as C, loader, metrics as M, ho_tables as H, pptx_export as X, pivot as PV, scheme_ui, ui, bazaar_ui, lrs_ui
 from hodash.periods import KINDS, MONTHS, fy_label, make_period, mi_name
 
 st.set_page_config(page_title="Servo Sales Dashboard", page_icon="🛢️", layout="wide", initial_sidebar_state="expanded")
@@ -199,9 +199,12 @@ if wp["cy"].partial or ws["cy"].partial:
 for w_ in data.info["target_warnings"]:
     st.warning("Target file: " + w_)
 
-tab_ov, tab_bz, tab_pri, tab_sec, tab_gap, tab_ins, tab_ex, tab_pv, tab_sch, tab_ppt, tab_data = st.tabs(
-    ["🏠 Overview", "🛒 Bazaar", "🏭 Primary", "🚚 Secondary", "⚖️ Primary vs Secondary", "💡 Insights", "🔎 Explore",
+tab_ov, tab_bz, tab_lrs, tab_pri, tab_sec, tab_gap, tab_ins, tab_ex, tab_pv, tab_sch, tab_ppt, tab_data = st.tabs(
+    ["🏠 Overview", "🛒 Bazaar", "📋 LRS Format", "🏭 Primary", "🚚 Secondary", "⚖️ Primary vs Secondary", "💡 Insights", "🔎 Explore",
      "🧮 Pivot", "🎯 Schemes", "📑 PPT Studio", "🗂️ Data & checks"])
+
+with tab_lrs, ui.guard("LRS Format"):
+    lrs_ui.render(pri_all, sec_all, data.targets, pri_last, sec_last)
 
 with tab_bz, ui.guard("Bazaar analysis"):
     bz_ = filt(sec_all[sec_all.channel == "Bazaar"], True, skip=("channel",))
