@@ -29,6 +29,14 @@ def render(sec_all: pd.DataFrame, sec_last, default_window, show):
                                 help="Compared with the same months last year. Starts on the sidebar period.")
         segs = [s for s in sec_all.segment.dropna().astype(str).value_counts().index]
         seg = c2.multiselect("Segment", segs, placeholder="All segments", key="pr_seg")
+        pname = sec_all["product"].astype(str).str.upper()
+        words = pname.str.replace("SERVO", "", regex=False).str.split().str[0].dropna()
+        series_opts = ["HYPER"] + [w_ for w_ in words.value_counts().index if w_ != "HYPER" and len(w_) > 1]
+        c6, c7 = st.columns([3, 2])
+        series = c6.multiselect("Product series", series_opts, placeholder="All products",
+                                format_func=lambda x: "HYPER series (Hyperdrive, Hypersport…)" if x == "HYPER" else x.title(), key="pr_series",
+                                help="Keeps products whose name contains the series word, e.g. HYPER = every product with 'Hyper' in its name.")
+        contains = c7.text_input("Product name contains", "", placeholder="e.g. hyper, 0W-16, futura", key="pr_contains").strip().upper()
         c3, c4, c5 = st.columns([1.2, 1.2, 3])
         stk = c3.multiselect("Stockist (SSR)", sorted(sec_all.stockist.unique()), placeholder="All", key="pr_stk")
         chn = c4.multiselect("Channel", [c for c in C.CHANNEL_ORDER if c in set(sec_all.channel)], placeholder="All", key="pr_chn")
@@ -41,6 +49,14 @@ def render(sec_all: pd.DataFrame, sec_last, default_window, show):
     d = base
     if seg: d = d[d.segment.astype(str).isin(seg)]
     if cust: d = d[d.customer_id.isin(cust)]
+    if series or contains:
+        nm = d["product"].astype(str).str.upper() + " " + d.sku_name.astype(str).str.upper()
+        keep = pd.Series(not series, index=d.index)
+        for w_ in series: keep |= nm.str.contains(w_, regex=False)
+        if contains: keep &= nm.str.contains(contains, regex=False)
+        d = d[keep]
+        prods = sorted(d["product"].unique())
+        st.caption(f"Product filter keeps {len(prods)} product(s): " + (", ".join(p_.title() for p_ in prods[:15]) + (" …" if len(prods) > 15 else "") if prods else "none"))
     w = P.windows_for(a, b, sec_last)
     if w["cy"].partial:
         st.info(f"Data runs till {sec_last:%d-%b-%Y}: LY is cut at the same date (like-for-like).")
@@ -102,7 +118,8 @@ def render(sec_all: pd.DataFrame, sec_last, default_window, show):
 
     hdr = [f"Secondary sales · {w['cy'].label} vs {w['ly'].label}", f"Segment: {', '.join(seg) or 'All'}",
            f"Stockist: {', '.join(stk) or 'All'}", f"Channel: {', '.join(chn) or 'All'}",
-           f"Customers: {', '.join(names.loc[c, 'n'] for c in cust) if cust else 'All'}", f"Customer list: {q}",
+           f"Customers: {', '.join(names.loc[c, 'n'] for c in cust) if cust else 'All'}",
+           f"Product series: {', '.join(series) or 'All'}" + (f" · name contains '{contains}'" if contains else ""), f"Customer list: {q}",
            f"Data till {sec_last:%d-%b-%Y}. Premium = Material master category 'Premium'. ClearBlue excluded."]
     st.download_button("⬇ Download all tables (Excel)", P.excel({"Segment": sg, "Customers": cu, "Premium grades": pg}, hdr),
                        f"Secondary Premium Analysis {w['cy'].label.replace(chr(39), '')}.xlsx",
