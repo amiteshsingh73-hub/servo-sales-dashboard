@@ -131,13 +131,23 @@ def render(bz: pd.DataFrame, ws: dict, period, fy: int, tg, codes, sec_last, sho
             fig = go.Figure()
             for t_ in ts.index:
                 fig.add_bar(y=["Counters", "Volume"], x=[ts.loc[t_, "% Counters"], ts.loc[t_, "% Volume"]], name=t_, orientation="h",
-                            marker_color=TIER_COL[t_], text=[f"{ts.loc[t_, '% Counters']:.0f}%", f"{ts.loc[t_, '% Volume']:.0f}%"], textposition="inside")
-            fig.update_layout(barmode="stack", title="Share of counters vs share of volume", xaxis=dict(ticksuffix="%", range=[0, 100]))
+                            marker_color=TIER_COL[t_], text=[f"{ts.loc[t_, '% Counters']:.0f}%", f"{ts.loc[t_, '% Volume']:.0f}%"], textposition="inside",
+                            hovertemplate=f"{t_}: %{{x:.1f}}%<extra>%{{y}}</extra>")
+            fig.update_layout(barmode="stack", title="Share of counters vs share of volume", xaxis=dict(ticksuffix="%", range=[0, 100.5]),
+                              legend=dict(traceorder="normal"))
             ui.chart(ui.layout(fig, 260, hover="closest"))
         with b:
             st.write("")
-            _num(ts.reset_index().rename(columns={"tier": "Tier"}), show)
+            tsv = ts.reset_index().rename(columns={"tier": "Tier"})
+            tsv["Counters"] = tsv["Counters"].astype(int)
+            _num(tsv, show)
         st.caption(f"Tier bands: {', '.join(f'{n} {r}' for n, r in zip(ts.index, ts.Band))}. Bands are set in hodash/bazaar.py (TIERS).")
+        pick_t = st.radio("Counters in tier", list(ts.index), horizontal=True, key="bz_tier",
+                          format_func=lambda x: f"{x} ({int(ts.loc[x, 'Counters'])})")
+        lst = B.counter_master(bz).join(tr[tr.tier == pick_t], how="inner").sort_values("lpm", ascending=False)
+        lst = lst.rename(columns={"lpm": "Avg L / month", "kl": f"KL {ws['cy'].label}"}).drop(columns="tier")
+        _num(lst, show)
+        _csv(lst, f"Bazaar_{pick_t}_counters.csv")
 
     # ------------------------------------------------------------ sales force & sub-groups
     ui.section("Sales force scorecard (SSF)", "volume, growth, reach and productivity per field officer")
@@ -160,12 +170,13 @@ def render(bz: pd.DataFrame, ws: dict, period, fy: int, tg, codes, sec_last, sho
         t = B.scorecard(bz, ws, dim, lc)
         with col:
             if t.empty: st.info("No data"); continue
-            t = t.head(12)
-            fig = go.Figure(go.Bar(x=t.index, y=t["CY (KL)"], marker_color=ui.NAVY,
-                                   text=[f"{g:+.0f}%" if g == g and abs(g) < 999 else "" for g in t["% Growth"]], textposition="outside", name="CY"))
-            fig.add_scatter(x=t.index, y=t["LY (KL)"], mode="markers", name="LY", marker=dict(color=ui.ORANGE, size=10, symbol="line-ew-open", line=dict(width=3)))
-            fig.update_layout(title=f"{ttl}: CY KL (LY marker, growth % on top)", xaxis_tickangle=-25)
-            ui.chart(ui.layout(fig, 360, hover="closest"))
+            t = t.head(12); tc = t.head(8)           # chart: top 8 so labels stay readable; table: top 12
+            xl = [ui.wrap(str(i).title(), 10) for i in tc.index]
+            fig = go.Figure(go.Bar(x=xl, y=tc["CY (KL)"], marker_color=ui.NAVY, name="CY"))
+            fig.add_scatter(x=xl, y=tc["LY (KL)"], mode="markers", name="LY", marker=dict(color=ui.ORANGE, size=14, symbol="line-ew-open", line=dict(width=3)))
+            ui.growth_labels(fig, xl, tc["CY (KL)"], tc["LY (KL)"], tc["% Growth"])
+            fig.update_layout(title=f"{ttl}: CY KL (LY marker, growth % on top)", xaxis_tickangle=0)
+            ui.chart(ui.layout(fig, 400, hover="closest"))
             _num(t[["CY (KL)", "LY (KL)", "% Growth", "% Share", "Active counters", "L / counter / month", "₹ / L"]].reset_index().rename(columns={"index": ttl}), show)
 
     # ------------------------------------------------------------ product mix
@@ -185,7 +196,8 @@ def render(bz: pd.DataFrame, ws: dict, period, fy: int, tg, codes, sec_last, sho
         for j, c in enumerate([c for c in cat_order if c in cc.index] + [c for c in cc.index if c not in cat_order]):
             tot_ly, tot_cy = cc.ly.sum() or 1, cc.cy.sum() or 1
             fig.add_bar(x=[f"LY {ws['ly'].label}", f"CY {ws['cy'].label}"], y=[cc.loc[c, "ly"] / tot_ly * 100, cc.loc[c, "cy"] / tot_cy * 100], name=c,
-                        marker_color=ui.CAT[j % len(ui.CAT)], text=[f"{cc.loc[c, 'ly'] / tot_ly * 100:.0f}%", f"{cc.loc[c, 'cy'] / tot_cy * 100:.0f}%"], textposition="inside")
+                        marker_color=ui.CAT[j % len(ui.CAT)], text=[f"{cc.loc[c, 'ly'] / tot_ly * 100:.0f}%", f"{cc.loc[c, 'cy'] / tot_cy * 100:.0f}%"], textposition="inside",
+                        hovertemplate=f"{c}: %{{y:.1f}}%<extra>%{{x}}</extra>")
         fig.update_layout(barmode="stack", title="Category mix (% of volume)", yaxis=dict(ticksuffix="%", range=[0, 100]))
         ui.chart(ui.layout(fig, 360, hover="closest"))
     a, b = st.columns(2)

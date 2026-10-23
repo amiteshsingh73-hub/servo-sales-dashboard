@@ -19,8 +19,9 @@ pio.templates["servo"] = go.layout.Template(layout=dict(
     xaxis=dict(showgrid=False, linecolor="#D5DAE5", ticks="", automargin=True),
     yaxis=dict(gridcolor="rgba(120,130,150,.15)", zeroline=False, automargin=True),
     hoverlabel=dict(bgcolor="#FFFFFF", bordercolor="#D5DAE5", font=dict(family=FONT, color="#1B2440")),
-    legend=dict(orientation="h", y=1.08, x=0, bgcolor="rgba(0,0,0,0)"),
-    bargap=.25, margin=dict(l=8, r=8, t=64, b=8)))
+    legend=dict(orientation="h", yanchor="bottom", y=1.01, x=0, bgcolor="rgba(0,0,0,0)"),
+    modebar=dict(orientation="v", bgcolor="rgba(255,255,255,.85)"),
+    bargap=.25, margin=dict(l=8, r=36, t=78, b=8)))
 pio.templates.default = "plotly+servo"
 
 CSS = f"""<style>
@@ -88,7 +89,8 @@ html, body, [class*="css"] {{ font-family:{FONT}; }}
 .hl ul {{ margin:0; padding-left:1.1rem; }} .hl li {{ margin:.25rem 0; color:var(--ink); }}
 .slicechip {{ background:#E8F3EC; border:1px solid #9FD0AE; color:#17613A; border-radius:14px; padding:3px 12px; font-size:.84rem; display:inline-block; margin:2px 4px 2px 0; }}
 .oops {{ background:#FFF6F5; border:1px solid #F3C3BD; border-radius:12px; padding:14px 18px; color:#7A271A; }}
-[data-testid="stPlotlyChart"] {{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:6px 8px 2px; box-shadow:0 1px 3px rgba(16,24,40,.06); }}
+[data-testid="stPlotlyChart"] {{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:6px 8px 2px; box-shadow:0 1px 3px rgba(16,24,40,.06);
+                                box-sizing:border-box; max-width:100%; overflow:hidden; }}
 [data-testid="stVerticalBlockBorderWrapper"] {{ border-radius:14px; }}
 div[data-testid="stDataFrame"] {{ border-radius:10px; overflow:hidden; }}
 </style>"""
@@ -166,8 +168,34 @@ def highlights(lines):
 
 def layout(fig, h=360, legend=True, hover="x unified"):
     fig.update_layout(height=h, showlegend=legend, hovermode=hover)
-    if any(isinstance(tr, go.Pie) for tr in fig.data):     # pies: legend at the side so it never covers the title
-        fig.update_layout(legend=dict(orientation="v", y=.5, x=1.02, yanchor="middle"), margin=dict(t=56))
+    n_leg = sum(1 for tr in fig.data if tr.showlegend is not False)
+    if any(isinstance(tr, go.Pie) for tr in fig.data) or (legend and n_leg > 4):
+        # pies and many-series charts: legend down the right side so it never covers the title or the bars
+        fig.update_layout(legend=dict(orientation="v", y=.5, x=1.02, yanchor="middle", traceorder="normal"), margin=dict(t=56, r=8))
+    inside = [tr for tr in fig.data if isinstance(tr, go.Bar) and tr.textposition in ("inside", "auto")]
+    for tr in inside: tr.update(textangle=0, insidetextanchor="middle")      # keep in-bar labels horizontal
+    if inside and fig.layout.barmode == "stack":
+        fig.update_layout(uniformtext=dict(minsize=9, mode="hide"))         # small slices: hide the label rather than squeeze it
+    return fig
+
+
+def wrap(label, width=14) -> str:
+    """Break long axis labels over lines (plotly uses <br>)."""
+    words, lines, cur = str(label).replace("/", "/ ").split(), [], ""
+    for w in words:
+        if cur and len(cur) + len(w) + 1 > width: lines.append(cur); cur = w
+        else: cur = f"{cur} {w}".strip()
+    if cur: lines.append(cur)
+    return "<br>".join(lines[:3])
+
+
+def growth_labels(fig, x, cy, ly, growth):
+    """Growth % written above the taller of CY / LY so it never sits on the LY marker; adds head-room for it."""
+    top = [max(a if a == a else 0, b if b == b else 0) for a, b in zip(cy, ly)]
+    fig.add_scatter(x=list(x), y=top, mode="text", text=[f"{g:+.0f}%" if g == g and abs(g) < 999 else "" for g in growth],
+                    textposition="top center", textfont=dict(size=11, color="#2B3350"), showlegend=False, hoverinfo="skip", cliponaxis=False)
+    ymax = max(top + [0])
+    fig.update_yaxes(range=[0, ymax * 1.2 if ymax > 0 else 1])
     return fig
 
 
