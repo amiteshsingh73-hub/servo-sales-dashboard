@@ -27,6 +27,11 @@ def _pct(x):
     return "" if x is None or x != x else f"{x * 100:.1f}%"
 
 
+def _rng(d) -> str:
+    lo, hi = d.get("pot_lo"), d.get("pot_hi")
+    return f"<br><span style='font-size:.72rem;color:#5B6475'>{lo:,.1f}–{hi:,.1f}</span>" if lo == lo and hi == hi and lo is not None else ""
+
+
 def _html(r: dict) -> str:
     e = html.escape
     month = r["month_label"] + (f" (till {r['data_till']:%d-%b-%y})" if r["partial"] else "")
@@ -37,7 +42,7 @@ def _html(r: dict) -> str:
         cls = "pos" if d["diff"] >= 0 else "neg"
         h += [f"<tr><td colspan=3><b>{lbl}</b></td><td colspan=6 class='y'>{e(val)}</td></tr>",
               "<tr><th>Potential (KL)</th><th>Target (KL)</th><th>Sales CY (KL)</th><th>Sales LY (KL)</th><th>(+/-)</th><th colspan=4>Remarks</th></tr>",
-              f"<tr><td>{_n(d['potential']) or '–'}</td><td>{_n(d['target']) or '–'}</td><td><b>{_n(d['cy'])}</b></td><td>{_n(d['ly'])}</td>"
+              f"<tr><td>{_n(d['potential']) or '–'}{_rng(d)}</td><td>{_n(d['target']) or '–'}</td><td><b>{_n(d['cy'])}</b></td><td>{_n(d['ly'])}</td>"
               f"<td class='{cls}'>{d['diff']:+,.2f}</td><td colspan=4 class='rm'>{e(d['remark'])}</td></tr>"]
     h += ["</table><table class='lrs'><tr><td colspan=9 class='ttl'>LUBES RESELLER GROUP</td></tr>",
           "<tr><td colspan=9>Analysis of Secondary Sales</td></tr>",
@@ -67,21 +72,22 @@ def render(pri, sec, targets, pri_last, sec_last):
                      help="Primary = stockist billing from the Primary sales file vs primary target. Secondary = stockist's sales to counters from the Secondary file vs secondary target.")
     sp = c3.radio("Secondary table period", ["Cumulative", "Month"], horizontal=True, key="lrs_secp",
                   help="Cumulative = April to the selected month (matches 'Cum. No. Supplied').")
+    share = st.select_slider("Assumed IOCL market share (for Potential)", options=[10.0, 10.5, 11.0, 11.5, 12.0], value=11.0,
+                             format_func=lambda v: f"{v:g}%", key="lrs_share",
+                             help="Potential = last full-year sales of the stockist ÷ market share, spread evenly over the months. "
+                                  "The small figures under Potential show the range at 12% and 10%.")
     pot = lrs.load_potential()
-    blocks = lrs.build(pri, sec, targets, pri_last, sec_last, int(mi), basis, sp, pot)
+    blocks = lrs.build(pri, sec, targets, pri_last, sec_last, int(mi), basis, sp, pot, share / 100)
 
     d1, d2, d3 = st.columns([1.4, 1.4, 3])
     tag = mi_name(int(mi)).replace("'", "")
     d1.download_button(f"⬇ Excel – all {len(blocks)} SSRs (one sheet each)", lrs.workbook_bytes(blocks), f"LRS Sales Analysis - {tag}.xlsx",
                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", key="lrs_dl_all")
     d2.download_button(f"⬇ {len(blocks)} separate files (ZIP)", lrs.zip_bytes(blocks), f"LRS Sales Analysis - {tag} (per SSR).zip", "application/zip", key="lrs_dl_zip")
-    if not pot:
-        with d3:
-            st.caption(f"Potential (KL) is blank: add annual potential per stockist in **{lrs.POTENTIAL_FILE}** in the Data folder.")
-            if not lrs.potential_path().exists() and st.button("Create the potential file for me", key="lrs_mk_pot"):
-                names = dict(zip(pri.drop_duplicates("stockist_code").stockist_code.astype(int), pri.drop_duplicates("stockist_code").stockist))
-                f = lrs.write_potential_template(names, blocks[0]["fy"])
-                st.success(f"Created {f.name} - fill the 'Annual Potential (KL)' column, save, and refresh.")
+    if blocks and blocks[0].get("pot_src") == "share":
+        b0 = blocks[0]
+        d3.caption(f"Potential = {b0['pot_fy']} {basis.lower()} sales ÷ {share:g}% market share (range shown for 12%–10%). "
+                   f"Typed figures in {lrs.POTENTIAL_FILE} would override this.")
     if blocks and blocks[0]["partial"]:
         st.info(f"{mi_name(int(mi))} is still in progress in the data (till {blocks[0]['data_till']:%d-%b-%Y}); LY is cut at the same date.")
 

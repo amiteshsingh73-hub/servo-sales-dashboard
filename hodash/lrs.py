@@ -6,7 +6,8 @@ Layout follows 'LRS Field Sales Analysis Format.xlsx':
 
 Sources: sales from the Primary and Secondary sales files only (top section = primary, outlet table = secondary;
 Total No. = outlets billed in the 12 months to the period end), targets from the Target workbook, and an optional
-'SSR Potential.xlsx' in the data folder (annual potential in KL per stockist).
+'SSR Potential.xlsx' in the data folder (annual potential in KL per stockist). Without that file the potential is
+derived from market share: last full FY sales of the stockist / assumed IOCL market share (default 11%, range 10-12%).
 """
 from __future__ import annotations
 import io, re, zipfile
@@ -97,7 +98,7 @@ def _remark(cy, tgt, ly) -> str:
 
 
 def build(pri, sec, targets, pri_last, sec_last, mi: int, basis="Primary", sec_period="Cumulative",
-          potential: dict | None = None) -> list[dict]:
+          potential: dict | None = None, share: float = 0.11, share_range=(0.10, 0.12)) -> list[dict]:
     fy, fm = _fy_fm(mi)
     potential = potential or {}
     base, last = (pri, pri_last) if basis == "Primary" else (sec, sec_last)
@@ -111,14 +112,21 @@ def build(pri, sec, targets, pri_last, sec_last, mi: int, basis="Primary", sec_p
     for code in sorted(names.index, key=lambda c: str(names[c])):
         b = base[base.stockist_code == code]
         pot_y = potential.get((int(code), fy), potential.get((int(code), None), np.nan))
+        base_ly = float(b[b.fy == fy - 1].kl.sum())          # last full financial year, same basis as the top section
+        pot_src = "file" if pot_y == pot_y else ("share" if base_ly > 0 else "none")
+        if pot_src == "share": pot_y = base_ly / share
+        rng_y = (base_ly / share_range[1], base_ly / share_range[0]) if base_ly > 0 else (np.nan, np.nan)
         r = {"code": int(code), "stockist": names[code], "fy": fy, "fm": fm, "mi": mi, "basis": basis,
              "month_label": mi_name(mi), "cum_label": f"{mi_name(mi_of(fy, 1))} to {mi_name(mi)}",
              "partial": bool(wm["cy"].partial), "data_till": last}
         for key, w, fms in (("month", wm, [fm]), ("cum", wc, list(range(1, fm + 1)))):
             cy, ly = M.kl(b, w["cy"]), M.kl(b, w["ly"])
             tgt = M.target_for(targets, [code], fy, fms, basis)
-            pot = pot_y / 12 * len(fms) if pot_y == pot_y else np.nan
-            r[key] = dict(potential=pot, target=tgt, cy=cy, ly=ly, diff=cy - ly, remark=_remark(cy, tgt, ly))
+            f_ = len(fms) / 12
+            pot = pot_y * f_ if pot_y == pot_y else np.nan
+            r[key] = dict(potential=pot, pot_lo=rng_y[0] * f_, pot_hi=rng_y[1] * f_, target=tgt, cy=cy, ly=ly, diff=cy - ly,
+                          remark=_remark(cy, tgt, ly) + (f"; market share {cy / pot * 100:.1f}% of potential" if pot == pot and pot else ""))
+        r.update(pot_src=pot_src, pot_base=base_ly, share=share, share_range=share_range, pot_fy=fy_label(fy - 1))
         # ---- secondary by outlet type
         s = sec_t[sec_t.stockist_code == code]
         cy_s, ly_s = M.sel(s, ws_sec["cy"]), M.sel(s, ws_sec["ly"])
@@ -213,7 +221,9 @@ def _sheet(ws, r: dict):
                               top=_med if c.row == 14 else b.top, bottom=_med if c.row == 24 else b.bottom)
     note = (f"Sales in the top section = {'primary (company to stockist)' if r['basis'] == 'Primary' else 'secondary (stockist to counters)'}. "
             "Secondary excludes ClearBlue (DEF). Total No. = outlets billed in the 12 months to the period end "
-            "(Secondary file). Potential from Data/SSR Potential.xlsx.")
+            "(Secondary file). " + (f"Potential = {r['pot_fy']} sales {r['pot_base']:,.1f} KL / {r['share']:.0%} assumed IOCL market share "
+            f"(range {r['share_range'][0]:.0%}-{r['share_range'][1]:.0%}: {r['pot_base'] / r['share_range'][1]:,.0f}-{r['pot_base'] / r['share_range'][0]:,.0f} KL a year), "
+            "spread evenly over the months." if r["pot_src"] == "share" else "Potential from Data/SSR Potential.xlsx."))
     ws["A26"] = note; ws["A26"].font = Font(size=8, italic=True, color="666666"); ws["A26"].alignment = _LEFT
     ws.merge_cells("A26:I27")
     ws.sheet_view.showGridLines = False
