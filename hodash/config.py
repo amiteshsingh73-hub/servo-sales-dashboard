@@ -40,6 +40,11 @@ STOCKIST_ALIASES = {
     262098: "Madhuban Enterprises",
 }
 
+# Address line printed under the SSR name in the Review Letters (editable in the tab too).
+LETTER_ADDRESS = {
+    262098: "Palghar",
+}
+
 # --- HO-template groupings -------------------------------------------------------------
 # Pack category (Pack Master) -> HO slide "SKU Group"
 PACK_GROUPS = {

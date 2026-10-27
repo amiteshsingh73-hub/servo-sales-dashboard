@@ -7,6 +7,14 @@
 4. Open the **Data & checks** tab: confirm file counts, latest invoice date and zero warnings.
 5. Review, then use **PPT Studio** to download the HO-template deck.
 
+## Review Letters (monthly SSR Bazaar review letter + mail)
+- Tab **✉️ Review Letters**. Defaults to the latest complete month in the Primary/Secondary files; covers Apr → that month vs LY (like-for-like) and target, with the month itself highlighted.
+- The first time a new complete month shows up, the letters for all SSRs are written automatically to `Sales Review/Reports/Review Letters <Mon-YY>/` (Word letter + lost/declining counter list per SSR). Delete that folder to have it regenerated; or use **Save** / **ZIP** in the tab after editing the settings.
+- Tone is set by the data: Strong (Bazaar < 95% of target or below LY), Watch (latest month > 10% below LY, or lost counters > 2× new), Good (appreciation).
+- Ref. no., date, address, previous-letter reference, reply days and new-counter target are editable in "Letter settings". Default addresses: `LETTER_ADDRESS` in `hodash/config.py`.
+- Letterhead: put `Letterhead*.docx` (IOCL letterhead with header/footer) in `Data/` and the letters are printed on it. Mail addresses: `Data/SSR Contacts.xlsx` (To / CC, Signature sheet).
+- Code: `hodash/review_letter.py` (numbers, wording, Word file, mail) and `hodash/review_letter_ui.py` (screen).
+
 ## Once a year (April): roll over the year
 - `hodash/config.py` -> `TARGET_SHEET` is `"FY2526 Base Target"`. Checked 20-Oct-2026: despite its name, that sheet holds the **FY 26-27** targets (FY25-26 sales as "BASE", months Apr'26-Mar'27), so it is correct for this year. Next April, point it at whichever sheet holds the FY 27-28 blocks.
 - Replace `HO PPT format LSE STANDARD TEMPLATE ....pptx` in `Data/` with the new template.
