@@ -15,6 +15,11 @@
 - Letterhead: put `Letterhead*.docx` (IOCL letterhead with header/footer) in `Data/` and the letters are printed on it. Mail addresses: `Data/SSR Contacts.xlsx` (To / CC, Signature sheet).
 - Code: `hodash/review_letter.py` (numbers, wording, Word file, mail) and `hodash/review_letter_ui.py` (screen).
 
+## Area report (segment / customer / area / period workbook)
+- Double-click `Build Area Report.command` after dropping a new Secondary file (and a newer `*Customer Master*.xlsx`) in `Data/`. ~20 s; output in `Sales Review/Reports/`.
+- Area mapping lives in `Data/Area Master.xlsx` (pincode -> Area -> Zone; customer pincode overrides for ROs). Fill the yellow cells and rebuild. Seed values: `hodash/areas.py` (only used when that file does not exist).
+- The script builds the file in Excel's local folder (~/Library/Containers/com.microsoft.Excel/Data/tmp/area_report), lets Excel calculate it there, then copies it into Reports. Never let Excel recalc inside OneDrive: older cloud copies come back over the new file. `--no-excel` skips the recalc.
+
 ## Once a year (April): roll over the year
 - `hodash/config.py` -> `TARGET_SHEET` is `"FY2526 Base Target"`. Checked 20-Oct-2026: despite its name, that sheet holds the **FY 26-27** targets (FY25-26 sales as "BASE", months Apr'26-Mar'27), so it is correct for this year. Next April, point it at whichever sheet holds the FY 27-28 blocks.
 - Replace `HO PPT format LSE STANDARD TEMPLATE ....pptx` in `Data/` with the new template.
