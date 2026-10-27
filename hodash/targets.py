@@ -41,10 +41,44 @@ def _month_cols(row):
     return [c[0] for c in cols], 2000 + cols[0][2] + 1
 
 
+def target_files() -> list:
+    """Target workbooks in the data folder, newest first."""
+    out = []
+    try:
+        for f in C.DATA_DIR.glob("*"):
+            try:
+                if f.is_file() and not f.name.startswith(("~$", ".")) and f.suffix.lower() in (".xlsx", ".xlsm") \
+                        and re.match(C.TARGET_PATTERN.replace("*", ".*"), f.name, re.I):
+                    out.append((f.stat().st_mtime, f))
+            except OSError:
+                continue
+    except OSError:
+        return []
+    return [f for _, f in sorted(out, key=lambda t: t[0], reverse=True)]
+
+
 def find_target_file():
-    fs = [f for f in C.DATA_DIR.glob("*") if f.is_file() and not f.name.startswith(("~$", "."))
-          and f.suffix.lower() in (".xlsx", ".xlsm") and re.match(C.TARGET_PATTERN.replace("*", ".*"), f.name, re.I)]
-    return max(fs, key=lambda p: p.stat().st_mtime) if fs else None
+    fs = target_files()
+    return fs[0] if fs else None
+
+
+def load(name_to_code: dict):
+    """Targets from the newest Target workbook that actually contains targets; an unreadable or wrongly laid-out newer
+    file falls back to the previous one (with a warning) instead of losing the targets. Returns (df, warnings, file name)."""
+    files = target_files()
+    if not files:
+        return parse(None, name_to_code) + (None,)
+    skipped = []
+    for f in files:
+        try:
+            t, w = parse(f, name_to_code)
+        except Exception as e:  # noqa: BLE001  locked / half-synced / not a workbook
+            skipped.append(f"{f.name} could not be opened ({type(e).__name__}) - is it open in Excel or still syncing?"); continue
+        if len(t):
+            note = [f"Using {f.name}; newer target file(s) skipped: " + " | ".join(skipped)] if skipped else []
+            return t, note + w, f.name
+        skipped.append(f"{f.name}: " + "; ".join(w))
+    return pd.DataFrame(columns=COLS), skipped or ["No targets recognised."], files[0].name
 
 
 def parse(path, name_to_code: dict[str, int]):

@@ -1,7 +1,7 @@
 # Maintenance guide - Servo Sales Dashboard (works without any AI)
 
 ## Monthly routine (5 minutes)
-1. Export SAP Primary and DMS Secondary reports. Save into `Sales Review/Data/` named `Primary Sales <Mon><YY>.xlsx` / `Secondary Sales <Mon><YY>.xlsx`.
+1. Export SAP Primary and DMS Secondary reports. Either drop them on **📤 Add sales files** in the dashboard sidebar (they are recognised, checked and saved into `Data/` for you), or save them into `Sales Review/Data/` yourself named `Primary Sales <Mon><YY>.xlsx` / `Secondary Sales <Mon><YY>.xlsx`. Either way the open dashboard refreshes within 20 seconds; nothing else is needed (no AI, no internet).
 2. Update the Target workbook in `Data/` (one file only; newest `Target*` is used).
 3. Start the dashboard: double-click `Start Sales Review.command` (or `run_dashboard.command`).
 4. Open the **Data & checks** tab: confirm file counts, latest invoice date and zero warnings.
@@ -40,16 +40,24 @@
 ## Health checks (run after ANY change or after a Python/library update)
 ```
 cd "Sales Review/sales_dashboard"
-~/.local/venvs/sales_review_ho/bin/python selfcheck.py          # messy-file handling, should end ALL CHECKS PASSED
-~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py   # renders every tab, ~2 min, should end ALL SCENARIOS PASSED
+~/.local/venvs/sales_review_ho/bin/python selfcheck.py               # messy-file merges, should end ALL CHECKS PASSED
+~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py        # every tab x 18 filter combinations, ~3 min -> ALL SCENARIOS PASSED
+~/.local/venvs/sales_review_ho/bin/python tests/data_scenarios.py    # 12 messy Data folders, ~2 min -> ALL DATA SCENARIOS PASSED
+~/.local/venvs/sales_review_ho/bin/python tests/fuzz_widgets.py --quick   # changes every filter on every tab, ~25 min -> NO CRASHES FOUND
 ```
-Last verified: 19-Oct-2026, both passed.
+All of them work on copies / read-only, never on your real files. Last verified: 27-Oct-2026 (v3.1.1), all passed.
+
+## Version
+Shown at the bottom of the sidebar and on Data & checks. Lives in `hodash/version.py`; every release gets a line in `CHANGELOG.md` and a git tag (`git tag v3.1.1`).
+
+## If a tab shows "could not be shown for this selection"
+The rest of the dashboard keeps working. The full error is in `Sales Review/logs/dashboard_errors.log` (newest at the bottom) - usually a sales file whose column headings changed. Compare the headings with `REQUIRED` in `hodash/loader.py`.
 
 ## Where the Python environment lives
 `~/.local/venvs/sales_review_ho` (outside OneDrive on purpose: ~15,000 small files in the folder made OneDrive and Spotlight slow the Mac). The launchers create it automatically on first run if missing. It is rebuilt from `requirements.txt`; nothing in it is precious.
 
 ## If it will not start
-- Look at `Sales Review/logs/sales_dashboard.log` (last lines show the error).
+- Look at `Sales Review/logs/ho_dashboard.log` (HO dashboard, port 8502) or `sales_dashboard.log` (port 8501) - the last lines show the error - and `dashboard_errors.log`.
 - Rebuild the environment (safe, data is untouched):
   ```
   cd "Sales Review/sales_dashboard"; rm -rf ~/.local/venvs/sales_review_ho

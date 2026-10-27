@@ -17,9 +17,16 @@ from . import config as C, targets
 def _match(pattern: str) -> list[Path]:
     rx = re.compile("^" + re.escape(pattern).replace(r"\*", ".*") + "$", re.I)
     out = []
-    for f in C.DATA_DIR.iterdir():
-        if f.is_file() and not f.name.startswith(("~$", ".")) and f.suffix.lower() in C.EXTENSIONS and rx.match(f.name):
-            out.append(f)
+    try:
+        entries = list(C.DATA_DIR.iterdir())
+    except OSError:                       # folder missing / OneDrive not mounted: behave like an empty folder
+        return []
+    for f in entries:
+        try:
+            if f.is_file() and not f.name.startswith(("~$", ".")) and f.suffix.lower() in C.EXTENSIONS and rx.match(f.name):
+                out.append(f)
+        except OSError:
+            continue
     return sorted(out)
 
 
@@ -32,11 +39,16 @@ def signature() -> str:
     parts = []
     for k, fs in discover().items():
         for f in fs:
-            st = f.stat()
-            parts.append(f"{k}|{f.name}|{st.st_size}|{int(st.st_mtime)}")
-    tf = targets.find_target_file()
-    if tf:
-        st = tf.stat(); parts.append(f"t|{tf.name}|{st.st_size}|{int(st.st_mtime)}")
+            try:
+                st = f.stat()
+                parts.append(f"{k}|{f.name}|{st.st_size}|{int(st.st_mtime)}")
+            except OSError:                  # file vanished between listing and stat - next check picks it up
+                parts.append(f"{k}|{f.name}|gone")
+    for tf in targets.target_files():
+        try:
+            st = tf.stat(); parts.append(f"t|{tf.name}|{st.st_size}|{int(st.st_mtime)}")
+        except OSError:
+            parts.append(f"t|{tf.name}|gone")
     return hashlib.md5("\n".join(parts).encode()).hexdigest()
 
 
@@ -111,6 +123,13 @@ def _num_col(x) -> pd.Series:
     if x is None: return pd.Series(dtype=float)
     if x.dtype == object: x = x.astype(str).str.replace(",", "", regex=False)
     return pd.to_numeric(x, errors="coerce")
+
+
+def _opt(df: pd.DataFrame, *names, default="-") -> pd.Series:
+    """Optional text column: the column if present (blanks -> default), else a column of `default`."""
+    s = _col(df, *names)
+    if s is None: return pd.Series(default, index=df.index, dtype=object)
+    return s.astype(object).where(s.notna(), default).astype(str)
 
 
 def _clean_name(x: pd.Series) -> pd.Series:
@@ -257,14 +276,15 @@ def _stockist(df: pd.DataFrame, code: pd.Series, name: pd.Series) -> pd.DataFram
 def norm_primary(raw: pd.DataFrame) -> pd.DataFrame:
     df = pd.DataFrame(index=raw.index)
     _dates(df, _col(raw, "Inv.Date", "Invoice Date", "Billing Date"))
-    _stockist(df, _col(raw, "Payer", "Stockist Code"), _col(raw, "Name", "Stockist Name"))
+    code = _col(raw, "Payer", "Stockist Code")
+    _stockist(df, code, _col(raw, "Name", "Stockist Name") if _col(raw, "Name", "Stockist Name") is not None else code.astype(str))
     kl = _col(raw, "KL")
     if kl is None:
         kl = _num_col(_col(raw, "Billing qty in SKU")) / 1000
     df["kl"] = _num_col(kl).fillna(0.0)
     mat = pd.to_numeric(_col(raw, "Material"), errors="coerce").fillna(0).astype("int64")
     df["pcode"], df["pk"] = mat // 1000, mat % 1000
-    df["product_raw"] = _col(raw, "Description")
+    df["product_raw"] = _col(raw, "Description") if _col(raw, "Description") is not None else mat.astype(str)
     pc = _col(raw, "Pack Cat")
     df["pack_cat_file"] = pc if pc is not None else np.nan
     df["invoice"] = _col(raw, "Invoice No").astype(str) if _col(raw, "Invoice No") is not None else ""
@@ -277,12 +297,13 @@ def norm_primary(raw: pd.DataFrame) -> pd.DataFrame:
 def norm_secondary(raw: pd.DataFrame) -> pd.DataFrame:
     df = pd.DataFrame(index=raw.index)
     _dates(df, _col(raw, "Invoice Date"))
-    _stockist(df, _col(raw, "Stockist Code"), _col(raw, "Stockist Name"))
-    df["sales_area"] = _col(raw, "Sales Area")
+    code = _col(raw, "Stockist Code")
+    _stockist(df, code, _col(raw, "Stockist Name") if _col(raw, "Stockist Name") is not None else code.astype(str))
+    df["sales_area"] = _col(raw, "Sales Area") if _col(raw, "Sales Area") is not None else np.nan
     df["kl"] = _num_col(_col(raw, "Product Quantity(L/Kg)")).fillna(0.0) / 1000
     sku = pd.to_numeric(_col(raw, "SKU Code"), errors="coerce").fillna(0).astype("int64")
     df["pcode"], df["pk"] = sku // 1000, sku % 1000
-    df["product_raw"] = _col(raw, "SKU Name")
+    df["product_raw"] = _opt(raw, "SKU Name", default="Unknown SKU")
     df["sku_name"] = df["product_raw"].astype(str)
     amt = _col(raw, "Taxable Amount (Rs.)")
     df["amount"] = _num_col(amt).fillna(0.0) if amt is not None else 0.0
@@ -290,21 +311,21 @@ def norm_secondary(raw: pd.DataFrame) -> pd.DataFrame:
     df["ssf_code"] = ssf.astype(str).where(ssf.notna(), "-") if ssf is not None else "-"
     ssfn = _col(raw, "SSF Name")
     df["ssf_name"] = ssfn.astype(str).where(ssfn.notna(), "-") if ssfn is not None else "-"
-    df["cust_subclass"] = (_col(raw, "Customer Sub Class").fillna("-").astype(str) if _col(raw, "Customer Sub Class") is not None else "-")
+    df["cust_subclass"] = _opt(raw, "Customer Sub Class")
     for cc_, nm_ in (("Cat3 Agreement Sales Claimable Discount (Rs.)", "d_cat3"), ("HO Promotional Disc (Rs.)", "d_ho_promo"),
                      ("HO Sec Sales Discount (Rs.)", "d_ho_sec"), ("OEM Discount (Rs.)", "d_oem"), ("Manual Discount (Rs.)", "d_manual")):
         v_ = _col(raw, cc_)
         df[nm_] = (-_num_col(v_).fillna(0.0)) if v_ is not None else 0.0     # stored positive = discount given
     inv = _col(raw, "Invoice Number")
     df["invoice"] = inv.astype(str) if inv is not None else ""
-    df["customer_id"] = _col(raw, "Customer Id").astype(str)
-    df["customer"] = _col(raw, "Customer Name").astype(str).str.strip()
-    grp = _col(raw, "Customer Group").astype(str).str.upper().str.strip()
+    df["customer_id"] = _opt(raw, "Customer Id", default="Unknown")
+    df["customer"] = _opt(raw, "Customer Name", default="Unknown customer").str.strip()
+    grp = _opt(raw, "Customer Group", default="-").str.upper().str.strip()
     df["channel"] = grp.map(C.CHANNEL_MAP).fillna("Other")
     df["cust_group"] = grp.str.title()
-    df["cust_subgroup"] = _col(raw, "Customer Sub Group").fillna("-").astype(str)
-    df["district"] = (_col(raw, "Customer District") if _col(raw, "Customer District") is not None else _col(raw, "District")).fillna("-").astype(str).str.title()
-    df["order_type"] = _col(raw, "Order Type").fillna("-").astype(str)
+    df["cust_subgroup"] = _opt(raw, "Customer Sub Group")
+    df["district"] = _opt(raw, "Customer District", "District").str.title()
+    df["order_type"] = _opt(raw, "Order Type")
     for pat in C.EXCLUDE_SKU_PATTERNS:
         df = df[~df.sku_name.str.upper().str.contains(pat.upper(), regex=False)]
     return df.dropna(subset=["date"])
@@ -347,7 +368,12 @@ def load_all() -> Data:
             df, prob = read_table(f, kind)
             if prob: problems.append(prob)
             else: lst.append((f.name, df))
-    prod, pack = load_masters(files_sorted, [d for _, d in raw_p], problems)
+    try:
+        prod, pack = load_masters(files_sorted, [d for _, d in raw_p], problems)
+    except Exception as e:  # noqa: BLE001  optional files: carry on with the sales files' own columns
+        problems.append(f"Material / Pack master could not be used ({type(e).__name__}: {e}) - using the sales files' own product columns.")
+        prod = pd.DataFrame(columns=["key", "m_product", "m_category", "m_segment", "m_spec"])
+        pack = pd.DataFrame(columns=["pk", "pack_cat", "pack_desc"])
     out = {}
     for key, raws, fn in (("primary", raw_p, norm_primary), ("secondary", raw_s, norm_secondary)):
         if not raws:
@@ -392,7 +418,8 @@ def load_all() -> Data:
     names = {}
     for df in (out["primary"], out["secondary"]):
         if len(df): names.update(dict(zip(df.stockist, df.stockist_code)))
-    tdf, twarn = targets.parse(targets.find_target_file(), names)
-    info["target_file"] = targets.find_target_file().name if targets.find_target_file() else None
+    tdf, twarn, tfile = targets.load(names)
+    info["target_file"] = tfile
     info["target_warnings"] = twarn
+    info["retry"] = any("could not be opened" in p for p in problems) or any("could not be opened" in w for w in twarn)
     return Data(out["primary"], out["secondary"], tdf, info)

@@ -37,6 +37,11 @@ html, body, [class*="css"] {{ font-family:{FONT}; }}
 [data-testid="stSidebar"] [data-baseweb="tag"] * {{ color:#fff !important; }}
 [data-testid="stSidebar"] .stButton button {{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.3); }}
 [data-testid="stSidebar"] [data-testid="stExpander"] {{ background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.18); }}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary, [data-testid="stSidebar"] [data-testid="stExpander"] details {{ background:transparent !important; }}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary * {{ color:#FFFFFF !important; }}
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {{ background:rgba(255,255,255,.95); }}
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] * {{ color:#1B2440 !important; }}
+[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] * {{ color:#E9EDFA !important; }}
 [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {{ color:#C5CDE8 !important; }}
 
 /* hero banner */
@@ -212,8 +217,25 @@ def guard(where: str):
     try:
         yield
     except Exception as e:  # noqa: BLE001
+        tb = traceback.format_exc()
+        log_error(where, tb)
         st.markdown(f"<div class='oops'><b>{html.escape(where)}</b> could not be shown for this selection "
                     f"({html.escape(type(e).__name__)}: {html.escape(str(e)[:200])}).<br>"
                     f"Try another period or filter - the other tabs are not affected.</div>", unsafe_allow_html=True)
         with st.expander("Technical details (for support)"):
-            st.code(traceback.format_exc())
+            st.code(tb)
+
+
+def log_error(where: str, tb: str):
+    """Append the error to Sales Review/logs/dashboard_errors.log (kept small) so it can be looked at later."""
+    import datetime, os
+    from . import config as C
+    if os.environ.get("SALES_REVIEW_NO_AUTOSAVE") == "1": return          # tests: do not touch the real logs
+    try:
+        f = C.APP_DIR.parent / "logs" / "dashboard_errors.log"
+        f.parent.mkdir(exist_ok=True)
+        if f.exists() and f.stat().st_size > 2_000_000: f.replace(f.with_suffix(".old.log"))
+        with f.open("a", encoding="utf-8") as fh:
+            fh.write(f"\n===== {datetime.datetime.now():%d-%b-%Y %H:%M:%S}  {where}\n{tb}")
+    except Exception:
+        pass

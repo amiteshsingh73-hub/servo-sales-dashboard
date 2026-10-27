@@ -1,6 +1,8 @@
-# Servo Sales Dashboard (Primary, Secondary & Bazaar)
+# Servo Sales Dashboard (Primary, Secondary & Bazaar) - v3.1.1
 
-Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel performance, a dedicated **Bazaar (retail counter) analysis** tab, insights, pivot, scheme calculator and HO-template PPT export. It runs fully offline on local Excel files.
+Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel performance, a dedicated **Bazaar (retail counter) analysis** tab, insights, pivot, scheme calculator and HO-template PPT export. It runs fully offline on local Excel files - no AI, internet or cloud service is used at runtime.
+
+**Adding data:** drop the SAP Primary / DMS Secondary / Target workbooks on **📤 Add sales files** in the sidebar (they are recognised from their column headings and saved into `Data/`), or copy them into `Data/` directly. The open dashboard refreshes within 20 seconds; files OneDrive was still syncing are retried automatically. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 > **No data is stored in this repository.** Sales, target and master workbooks stay in your local `Data` folder (see `.gitignore`).
 
@@ -19,9 +21,11 @@ Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel 
 
 ## Tests
 - `~/.local/venvs/sales_review_ho/bin/python selfcheck.py` - messy file drops (title rows, serial dates, corrupt/locked files).
-- `~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py` - renders every tab headless under 15 period / filter combinations and fails if any section errors.
+- `~/.local/venvs/sales_review_ho/bin/python tests/smoke_test.py` - renders every tab headless under 18 period / filter combinations and fails if any section errors.
+- `~/.local/venvs/sales_review_ho/bin/python tests/data_scenarios.py` - 12 messy data folders (empty, missing, corrupt, half-synced, missing columns, new half month, no last-year history, one stockist).
+- `~/.local/venvs/sales_review_ho/bin/python tests/fuzz_widgets.py --quick` - changes every filter / selector on every tab and re-renders all tabs after each change.
 
-Every tab runs inside a guard (`hodash/ui.py`): if one section hits unexpected data it shows a small notice and the rest of the dashboard keeps working.
+`app.py` runs `dashboard.py` inside a page-wide safety net, and every tab runs inside its own guard (`hodash/ui.py`): if a section hits unexpected data it shows a small notice, logs the details to `Sales Review/logs/dashboard_errors.log`, and the rest of the dashboard keeps working.
 
 
 Start: double-click `run_dashboard.command` (or `~/.local/venvs/sales_review_ho/bin/streamlit run app.py`).
