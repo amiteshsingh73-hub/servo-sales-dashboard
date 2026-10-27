@@ -13,7 +13,7 @@ The version is shown at the bottom of the sidebar and on the **Data & checks** t
 
 **Automatic file pickup**
 - New **📤 Add sales files** box in the sidebar (and on the start screen when no data is loaded): drop Primary / Secondary / Target / Material / Pack files; each is recognised from its column headings, checked, and saved into `Data/` with a clear name. Duplicates are ignored. The dashboard refreshes itself.
-- Files that could not be opened because OneDrive was still syncing them are retried automatically every 90 seconds (before, they stayed skipped until another file changed).
+- Files that could not be opened because OneDrive was still syncing them are retried automatically every 90 seconds for up to 15 minutes (before, they stayed skipped until another file changed).
 - Files dropped straight into `Data/` (Finder, OneDrive web, e-mail attachment saved there) are still picked up within 20 seconds.
 
 **Testing** (run after any change - see MAINTENANCE.md)
