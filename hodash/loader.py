@@ -234,7 +234,7 @@ def product_group(seg: str, spec: str, name: str) -> str:
     if seg == "GENUINE OILS": return "Genuine Oil"
     if seg == "INDUSTRIAL":
         if "HYDRASHAKTI" in spec.upper() or "HYDRASHAKTI" in name: return "Hydrashakti 68"
-        if "SYSTEM" in name: return "System 68"
+        if "SYSTEM" in name and "HLP" not in name: return "System 68"      # HLP 68 counts as other industrial (HO deck)
         return "Other Industrial"
     return "Other"
 
@@ -282,6 +282,8 @@ def norm_primary(raw: pd.DataFrame) -> pd.DataFrame:
     if kl is None:
         kl = _num_col(_col(raw, "Billing qty in SKU")) / 1000
     df["kl"] = _num_col(kl).fillna(0.0)
+    nw = _col(raw, "Net Weight")                                   # SAP net weight of the line, in MT (used for MT figures)
+    df["mt"] = _num_col(nw).fillna(0.0) if nw is not None else np.nan
     mat = pd.to_numeric(_col(raw, "Material"), errors="coerce").fillna(0).astype("int64")
     df["pcode"], df["pk"] = mat // 1000, mat % 1000
     df["product_raw"] = _col(raw, "Description") if _col(raw, "Description") is not None else mat.astype(str)
@@ -291,7 +293,14 @@ def norm_primary(raw: pd.DataFrame) -> pd.DataFrame:
     # keep the file's own lookup columns for products the master doesn't know
     for tgt, src in (("f_cat", "Product cat"), ("f_seg", "Segment(MAT-1)"), ("f_spec", "Spec(MAT-2)")):
         s = _col(raw, src); df[tgt] = s if s is not None else np.nan
-    return df.dropna(subset=["date"])
+    return _valid_dates(df)
+
+
+def _valid_dates(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop rows without a usable invoice date (total / blank lines at the bottom of an export) and keep the month /
+    year columns as whole numbers (a single blank date row would otherwise turn them into 2027.0 floats)."""
+    df = df.dropna(subset=["date"])
+    return df.astype({"mi": "int64", "fy": "int64", "fm": "int64"})
 
 
 def norm_secondary(raw: pd.DataFrame) -> pd.DataFrame:
@@ -328,7 +337,7 @@ def norm_secondary(raw: pd.DataFrame) -> pd.DataFrame:
     df["order_type"] = _opt(raw, "Order Type")
     for pat in C.EXCLUDE_SKU_PATTERNS:
         df = df[~df.sku_name.str.upper().str.contains(pat.upper(), regex=False)]
-    return df.dropna(subset=["date"])
+    return _valid_dates(df)
 
 
 # ---------------------------------------------------------------- merge monthly drops

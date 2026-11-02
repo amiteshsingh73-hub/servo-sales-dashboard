@@ -172,8 +172,10 @@ def s_trend(prs, ctx):
 
 
 def s_channel(prs, ctx):
-    s = new_slide(prs, "Secondary sales by channel")
     ch = M.compare(ctx.sec, "channel", ctx.ws, order=C.CHANNEL_ORDER)
+    if ch.empty or not (ch.cy.abs().sum() + ch.ly.abs().sum()):
+        raise ValueError("no secondary sales in this period")
+    s = new_slide(prs, "Secondary sales by channel")
     add_bar_chart(s, ch.index, {f"CY {ctx.ws['cy'].label}": ch.cy.values, f"LY {ctx.ws['ly'].label}": ch.ly.values},
                   Inches(0.3), Inches(1.1), Inches(6.5), Inches(5.3), "Secondary sales by channel (KL)")
     t = pd.DataFrame({"Channel": ch.index, "CY": ch.cy.values, "LY": ch.ly.values, "% Growth": ch.growth.values, "% Share": ch.share.values})

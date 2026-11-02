@@ -2,13 +2,13 @@
 Started through app.py (the safety net):  ./run_dashboard.command  (or  ~/.local/venvs/sales_review_ho/bin/streamlit run app.py)
 Runs fully offline: it only reads the Excel / CSV files in the Data folder - no AI, internet or cloud service is used.
 """
-import glob, io, time
+import glob, io, re, time
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from hodash import config as C, loader, metrics as M, ho_tables as H, pptx_export as X, pivot as PV, scheme_ui, ui, bazaar_ui, lrs_ui, premium_ui, review_letter_ui, upload as U
+from hodash import config as C, loader, metrics as M, ho_tables as H, pptx_export as X, pivot as PV, scheme_ui, ui, bazaar_ui, lrs_ui, premium_ui, review_letter_ui, upload as U, ho_deck as HD
 from hodash.version import VERSION, RELEASED
 from hodash.periods import KINDS, MONTHS, fy_label, make_period, mi_name
 
@@ -792,49 +792,73 @@ with tab_sch:
         with st.expander("Technical details"): st.code(traceback.format_exc())
 
 # ================================================================== PPT STUDIO
+@st.cache_data(show_spinner=False, max_entries=8)
+def _deck_inventory(path: str, mtime: float):
+    return HD.inventory(path)
+
+
 with tab_ppt, ui.guard("PPT Studio"):
-    st.markdown("Pick the slides, then download a deck built on the **HO standard template** (cover kept, tables & charts are native/editable). "
-                "Everything follows the period & filters selected in the sidebar.")
-    st.success(f"Live data: Primary till **{pri_last:%d-%b-%Y}**, Secondary till **{sec_last:%d-%b-%Y}** · "
-               f"files: {', '.join(data.info['files']['primary'] + data.info['files']['secondary'])}. "
-               f"Slides rebuild automatically whenever a sales file changes.")
-    tpl = glob.glob(str(C.DATA_DIR / C.HO_TEMPLATE_GLOB))
-    if not tpl: st.warning("HO template not found in the data folder - a plain 16:9 deck will be generated.")
-    slide_opts = [k for k in X.SLIDES if k != "pivot" or ctx.pivot]
-    keys = st.multiselect("Slides", slide_opts, default=[k for k in X.DEFAULT_SLIDES if k in slide_opts] + (["pivot"] if ctx.pivot else []), format_func=lambda k: X.SLIDES[k][0])
-    cover = st.checkbox("Keep template cover slide", True)
-    c1, c2 = st.columns(2)
-    if keys:
-        fname = f"Sales_Review_{period.label().replace(chr(39), '')}_{fy_label(fy, True)}"
-        try:
-            deck = X.build_deck(ctx, keys, tpl[0] if tpl else None, cover)
-            c1.download_button("⬇ Download PPTX (HO template)", deck, f"{fname}.pptx",
-                               "application/vnd.openxmlformats-officedocument.presentationml.presentation", type="primary")
-            if st.toggle("Also keep a PPTX file in the exports folder updated automatically", False, key="autosave",
-                         help="Rewrites sales_dashboard/exports/Latest_Sales_Review.pptx every time the data or your selections change (works while the dashboard is running)."):
+    st.markdown("Builds the **complete HO LSE-interaction deck**: every slide of the HO standard template, in the template's order, "
+                "with the tables filled from the Primary / Secondary / Target files for the period and filters chosen in the sidebar. "
+                "Cells the sales files cannot provide (universe, plans, branding, action plans, visits …) are left for you to fill.")
+    st.caption(f"Data: Primary till {pri_last:%d-%b-%Y}, Secondary till {sec_last:%d-%b-%Y} · period {period.title()}")
+    bases = HD.find_bases(C.DATA_DIR, C.DATA_DIR.parent)
+    if not bases:
+        st.warning(f"HO template ('{C.HO_TEMPLATE_GLOB}') not found in {C.DATA_DIR}. Put the template there to get the full HO deck.")
+    else:
+        is_tpl = lambda f_: re.search("template", f_.name, re.I) is not None
+        c1, c2 = st.columns([3, 2])
+        base = c1.selectbox("Start from", bases, key="ppt_base",
+                            format_func=lambda f_: (f"HO standard template (blank) – {f_.name}" if is_tpl(f_) else
+                                                    f"My filled deck – {f_.name}  (keeps what I typed: universe, plans, profile, activities …)"),
+                            help="Template = clean HO format. A deck you filled earlier = same slides, numbers refreshed, everything you typed by hand kept "
+                                 "(typed targets for premium / product groups are kept too).")
+        inv = _deck_inventory(str(base), base.stat().st_mtime)
+        present = []
+        for _, k_, _t in inv:
+            if k_ and k_ not in present: present.append(k_)
+        lab = lambda k_: HD.LABELS.get(k_, k_)
+        with c2:
+            add_ssr = st.toggle("Add 'SSR Wise Channel Wise' slide", True, key="ppt_ssr",
+                                help="Secondary target vs sales by channel and stockist, placed after the Bazaar channel slide.")
+            extras = st.multiselect("Extra slides (before 'Thanks')", [k_ for k_ in HD.EXTRAS if k_ != "pivot" or ctx.pivot],
+                                    format_func=lambda k_: HD.EXTRAS[k_][0], key="ppt_extras")
+        with st.expander(f"Slides in the deck ({len(inv)} in the base) – untick any you do not want", expanded=False):
+            keep_keys = st.multiselect("Slides", present, default=present, format_func=lab, key="ppt_keys", label_visibility="collapsed")
+        skip = set(present) - set(keep_keys)
+        stamp = (sig, str(period), tuple(sorted(sel_st)), str(base), base.stat().st_mtime, tuple(sorted(skip)), tuple(extras), add_ssr,
+                 apportion, sliced)
+        fname = f"HO LSE Interaction {period.label().replace(chr(39), '')} {fy_label(fy, True)}"
+        if st.button("🛠 Build the HO deck", type="primary", key="ppt_build"):
+            with st.spinner("Filling the HO template…"):
+                deck_, report_ = HD.build(ctx, base, skip, extras, add_ssr)
+            st.session_state["ppt_out"] = (stamp, deck_, report_)
+        out_ = st.session_state.get("ppt_out")
+        if out_ and out_[0] == stamp:
+            _, deck_, report_ = out_
+            d1, d2, d3 = st.columns([1.4, 1.4, 2])
+            d1.download_button("⬇ Download PPTX (HO deck)", deck_, f"{fname}.pptx",
+                               "application/vnd.openxmlformats-officedocument.presentationml.presentation", type="primary", key="ppt_dl")
+            d2.download_button("⬇ Same tables as Excel", HD.deck_tables_xlsx(deck_), f"{fname}.xlsx",
+                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="ppt_xl")
+            if d3.toggle("Also save it in the exports folder", False, key="autosave",
+                         help="Writes sales_dashboard/exports/Latest_Sales_Review.pptx each time you build."):
                 out = C.APP_DIR / "exports"; out.mkdir(exist_ok=True)
-                (out / "Latest_Sales_Review.pptx").write_bytes(deck)
-                st.caption(f"Saved {out / 'Latest_Sales_Review.pptx'} · data till {min(pri_last, sec_last):%d-%b-%Y}")
-        except Exception as e:
-            c1.error(f"PPTX build failed: {e}")
-        # Excel with the same tables
-        buf = io.BytesIO()
-        with pd.ExcelWriter(buf, engine="openpyxl") as xw:
-            pd.DataFrame({"Highlights": H.highlights(ctx)}).to_excel(xw, sheet_name="Highlights", index=False)
-            for k in keys:
-                if k in ("highlights", "trend", "channel_chart", "pri_sec", "pivot"): continue
-                fn = {"summary": H.summary_table, "segment": H.segment_table, "stockist": H.stockist_table, "premium": H.premium_stockist_table,
-                      "pgroup": H.product_group_table, "pack": H.pack_table, "category": H.category_table, "sec_channel": H.sec_channel_table, "sec_stockist": H.sec_stockist_table,
-                      "sec_ro": lambda c: H.sec_channel_stockist_table(c, "RO"), "sec_bazaar": lambda c: H.sec_channel_stockist_table(c, "Bazaar"),
-                      "sec_oem": lambda c: H.sec_channel_stockist_table(c, "OEM")}[k]
-                t = fn(ctx); t2 = t.copy()
-                t2.to_excel(xw, sheet_name=k[:31], index=False)
-        c2.download_button("⬇ Download same tables as Excel", buf.getvalue(), f"{fname}.xlsx",
-                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    ui.section("Preview")
-    for k in keys:
-        if k in ("highlights",):
-            st.markdown(f"**{X.SLIDES[k][0]}**"); st.markdown("\n".join(f"- {h}" for h in H.highlights(ctx)))
+                (out / "Latest_Sales_Review.pptx").write_bytes(deck_)
+                d3.caption(f"Saved {out / 'Latest_Sales_Review.pptx'}")
+            filled = sum(1 for r_ in report_ if r_[2] in ("filled", "added"))
+            bad = [r_ for r_ in report_ if r_[2].startswith("NOT")]
+            (st.warning if bad else st.success)(f"{filled} slides filled from the sales files · "
+                                                f"{sum(1 for r_ in report_ if 'by hand' in r_[2])} slides for you to fill by hand"
+                                                + (f" · {len(bad)} could not be filled (left as in the base deck)" if bad else ""))
+            st.dataframe(pd.DataFrame(report_, columns=["Slide", "Content", "Status"]).replace({"Slide": {0: "+"}}),
+                         hide_index=True, width="stretch", height=min(700, 40 + 35 * len(report_)))
+        elif out_:
+            st.info("The period, filters or slide choice changed - click **Build the HO deck** again.")
+        st.caption("How the numbers are worked out: targets per stockist / channel come from the Target workbook; product-group, "
+                   "premium, pack, bucket and OEM-brand targets are the total target split on last year's mix (a target you typed in a "
+                   "filled deck is kept). Bazaar counter counts exclude ServoXpert workshops (they are on the IG slide). "
+                   "Years that the sales files do not fully cover are left as they are in the base deck.")
 
 # ================================================================== DATA
 with tab_data, ui.guard("Data & checks"):

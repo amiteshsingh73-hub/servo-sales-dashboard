@@ -21,9 +21,13 @@ def check(name, cond, extra=""):
 base = loader.load_all(); b0 = base.primary.kl.sum()
 check("real files load", len(base.primary) and len(base.secondary) and not base.info["problems"])
 
-raw = loader.read_table(next(tmp.glob("Primary Sales*")), "primary")[0]
-last = pd.to_datetime(raw["Inv.Date"]).max()
-new = raw[pd.to_datetime(raw["Inv.Date"]) >= last.replace(day=1)].copy()
+# build the fake next-month files from the Primary file holding the LATEST month (with several monthly files in Data,
+# copying an older one would overlap a month that is already there - and the loader rightly refuses to double count it)
+cands = [loader.read_table(f, "primary")[0] for f in sorted(tmp.glob("Primary Sales*"))]
+raw = max((c for c in cands if c is not None), key=lambda c: loader._to_datetime(c["Inv.Date"]).max())
+raw["Inv.Date"] = loader._to_datetime(raw["Inv.Date"])
+last = raw["Inv.Date"].max()
+new = raw[raw["Inv.Date"] >= last.replace(day=1)].copy()
 oct_, nov = new.head(30).copy(), new.head(10).copy()
 oct_["Inv.Date"] = (pd.to_datetime(oct_["Inv.Date"]) + pd.DateOffset(months=1)).dt.strftime("%d-%m-%Y")      # text dd-mm-yyyy, title rows above
 with pd.ExcelWriter(tmp / "Primary Sales Oct.xlsx") as w:

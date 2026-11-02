@@ -1,4 +1,4 @@
-# Servo Sales Dashboard (Primary, Secondary & Bazaar) - v3.1.1
+# Servo Sales Dashboard (Primary, Secondary & Bazaar) - v3.2.0
 
 Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel performance, a dedicated **Bazaar (retail counter) analysis** tab, insights, pivot, scheme calculator and HO-template PPT export. It runs fully offline on local Excel files - no AI, internet or cloud service is used at runtime.
 
@@ -17,7 +17,8 @@ Streamlit dashboard for Servo lubricant sales reviews: target tracking, channel 
 | ⚖️ Primary vs Secondary | stock build at stockists |
 | 💡 Insights | volume bridge, run-rate to target, achievement heat-map, counter & product movers, realisation |
 | 🔎 Explore / 🧮 Pivot | click-to-drill questions and a free pivot builder |
-| 🎯 Schemes · 📑 PPT Studio · 🗂️ Data & checks | incentive calculator, PPTX/Excel export, file and data checks |
+| 📑 PPT Studio | the complete HO LSE-interaction deck: all slides of the HO standard template filled from the sales files (or refresh your last filled deck and keep what you typed), plus an Excel copy of every table |
+| 🎯 Schemes · 🗂️ Data & checks | incentive calculator, file and data checks |
 
 ## Tests
 - `~/.local/venvs/sales_review_ho/bin/python selfcheck.py` - messy file drops (title rows, serial dates, corrupt/locked files).
@@ -35,7 +36,7 @@ Start: double-click `run_dashboard.command` (or `~/.local/venvs/sales_review_ho/
 - `Material master*.xlsx` / `Pack Master*.xlsx` (optional) improve category / segment mapping; without them it uses the Primary file's own Category/Segment columns and parses pack size from product names.
 - Targets: read directly from the Target workbook (`Target*.xlsx`, sheet set in `config.py` -> `TARGET_SHEET`): primary blocks per stockist and secondary blocks per stockist x channel. Edit that workbook; the dashboard refreshes. A warning appears if a stockist's months don't add to the stated total.
 - Business rules (ClearBlue excluded, ServoXpert in Bazaar, Dealer = RO, stockist names, pack/product groups): `hodash/config.py`, `hodash/loader.py`.
-- PPT Studio tab: pick slides -> downloads PPTX on the HO template + Excel of the same tables.
+- PPT Studio tab: Build the HO deck -> every slide of the HO template filled (or refresh a filled deck), + Excel of the same tables.
 
 ## Sharing / deployment
 - Just you: `Sales Dashboard.app` (in the Sales Review folder) - one click.

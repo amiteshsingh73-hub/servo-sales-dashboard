@@ -9,6 +9,7 @@ KINDS = ["Month", "Quarter", "Half-year", "YTD (Apr to month)", "Full year", "Cu
 
 
 def fy_label(fy: int, short=False) -> str:
+    fy = int(fy)
     return f"{(fy - 1) % 100:02d}-{fy % 100:02d}" if short else f"FY {fy - 1}-{fy % 100:02d}"
 
 

@@ -2,6 +2,21 @@
 
 The version is shown at the bottom of the sidebar and on the **Data & checks** tab (`hodash/version.py`).
 
+## v3.2.0 - 02-Nov-2026 - complete HO deck
+**PPT Studio fills the whole HO LSE-interaction template** (`hodash/ho_deck.py`)
+- All 37 slides of the HO standard template, in the template's order: cover date, area map, industry size (IOCL row in MT), highlights, stockist profile, Target vs Achievement (15 parameters), primary by segment / stockist / stockist target-vs-achievement by year / premium / category / Hyper series / SERVO & Genuine oil by brand / product group / pack / premium plan / bucket grades, secondary by channel / RO / Bazaar / OEM brand / OEM penetration / Fleet, Bazaar counters SSR- and district-wise, counter details (serviced, new, inactive, nil selling, net addition), sales per counter, the two Bazaar tracking slides (volume / invoice / SKU buckets), IG / ServoXpert. Activity slides (marketing, inspection, development, visits, initiatives, concerns) are kept for manual entry. Your own "SSR Wise Channel Wise" slide is added after the Bazaar slide.
+- Slides are found by title and columns by heading, tables are resized to the real stockists + Total, the HO formatting of every cell is kept.
+- **Start from your last filled deck**: numbers are refreshed, everything typed by hand is kept (universe, plans, profile, typed premium / product targets, older years), and "Apr-Sep" style period labels on refreshed slides follow the new period.
+- Numbers checked against the 04-Oct-2026 deck: identical on every data slide except grease (sales file has 5.1 MT for FY25-26).
+- Built on a button click (no slow-down elsewhere); report of what was filled / left for hand entry; Excel copy of all tables.
+
+**Fixes**
+- A blank-dated row in a newly added sales file turned the year column into decimals and broke the Explore and Data & checks tabs - fixed in the loader (years / months always whole numbers).
+- Bazaar counter counts leave out ServoXpert workshops (their volume stays in Bazaar) - as in the HO deck.
+- "Servosystem HLP 68" counts as Other Industrial, not System 68 - as in the HO deck.
+- Primary keeps SAP net weight (MT) for MT figures.
+- selfcheck builds its test months from the latest Primary file.
+
 ## v3.1.1 - 27-Oct-2026 - stability release
 **Crash-proofing**
 - Whole-page safety net: `app.py` now runs the dashboard (`dashboard.py`) inside a guard, so even an error outside a tab shows a short message with a *Try again* button instead of a broken page. Every tab keeps its own guard as before.

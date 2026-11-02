@@ -5,7 +5,7 @@
 2. Update the Target workbook in `Data/` (one file only; newest `Target*` is used).
 3. Start the dashboard: double-click `Start Sales Review.command` (or `run_dashboard.command`).
 4. Open the **Data & checks** tab: confirm file counts, latest invoice date and zero warnings.
-5. Review, then use **PPT Studio** to download the HO-template deck.
+5. Review, then **PPT Studio** → *Start from* (HO template, or last month's filled deck to keep what you typed) → **Build the HO deck** → download. The status table lists the slides left for hand entry. When HO sends a new template, put it in `Data/` (name `HO PPT format*TEMPLATE*.pptx`); slides are found by title and columns by heading, so small layout changes need no code change.
 
 ## Review Letters (monthly SSR Bazaar review letter + mail)
 - Tab **✉️ Review Letters**. Defaults to the latest complete month in the Primary/Secondary files; covers Apr → that month vs LY (like-for-like) and target, with the month itself highlighted.

@@ -25,6 +25,8 @@ def scenarios():
     yield "pack + category", {"sl_pack_group": "rarest", "sl_category": "rarest"}
     yield "premium tab: rare segment", {"pr_seg": "rarest"}
     yield "premium tab: HYPER series", {"pr_series": ["HYPER"]}
+    yield "PPT Studio: build HO deck (template)", {"click": "ppt_build"}
+    yield "PPT Studio: build on filled deck", {"ppt_base": 1, "click": "ppt_build"}
     yield "premium tab: one customer + stockist", {"pr_cust": "first", "pr_stk": "last"}
 
 
@@ -32,6 +34,12 @@ def apply(at, sc):
     sb = {w.key: w for w in at.sidebar.selectbox if w.key}
     ms = {w.key: w for w in at.multiselect if w.key}
     for k, v in sc.items():
+        if k == "click":
+            continue
+        if k == "ppt_base":
+            w = [w for w in at.selectbox if w.key == "ppt_base"]
+            if w and len(w[0].options) > v: w[0].select_index(v)
+            continue
         if k == "fy":
             sb["fy"].set_value(sb["fy"].options[-1] if False else sorted(sb["fy"].options)[0])
         elif k in sb:
@@ -52,10 +60,14 @@ def main():
         at = AppTest.from_file(APP, default_timeout=600).run()
         if sc:
             at = apply(at, {k: v for k, v in sc.items() if k != "month"}).run()
+            if "click" in sc:
+                [b for b in at.button if b.key == sc["click"]][0].click(); at.run()
             if "month" in sc:
                 [w for w in at.sidebar.selectbox if w.key == "month"][0].set_value(sc["month"]); at.run()
         exc = [e.message for e in at.exception]
         errs = [e.value for e in at.error if "could not" in str(e.value).lower() or "problem" in str(e.value).lower()]
+        if "click" in sc and not any("slides filled" in str(x.value) for x in list(at.success) + list(at.warning)):
+            errs.append("the HO deck was not built")
         caught = [m.value.split("</b>")[0].split("<b>")[-1] + ": " + m.value.split("(", 1)[-1][:120] for m in at.markdown if "class='oops'" in str(m.value)]
         errs += caught                      # sections that hit an error but were contained by ui.guard
         ok = not exc and not errs
