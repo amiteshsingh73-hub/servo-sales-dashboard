@@ -38,7 +38,7 @@ def prepare(df: pd.DataFrame) -> pd.DataFrame:
     d["Fiscal year"] = d.fy.map(fy_label)
     d["Quarter"] = "Q" + ((d.fm - 1) // 3 + 1).astype(str)
     d["Month"] = d.mi.map(mi_name)
-    d["Fiscal month"] = d.fm.map(lambda m: MONTHS[int(m) - 1])
+    d["Fiscal month"] = d.fm.map(lambda m: "-" if pd.isna(m) else MONTHS[int(m) - 1])
     return d
 
 

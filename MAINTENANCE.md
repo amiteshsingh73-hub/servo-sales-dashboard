@@ -54,7 +54,7 @@ Shown at the bottom of the sidebar and on Data & checks. Lives in `hodash/versio
 The rest of the dashboard keeps working. The full error is in `Sales Review/logs/dashboard_errors.log` (newest at the bottom) - usually a sales file whose column headings changed. Compare the headings with `REQUIRED` in `hodash/loader.py`.
 
 ## Where the Python environment lives
-`~/.local/venvs/sales_review_ho` (outside OneDrive on purpose: ~15,000 small files in the folder made OneDrive and Spotlight slow the Mac). The launchers create it automatically on first run if missing. It is rebuilt from `requirements.txt`; nothing in it is precious.
+`~/.local/venvs/sales_review_ho` (outside OneDrive on purpose: ~15,000 small files in the folder made OneDrive and Spotlight slow the Mac). The launchers create it automatically on first run if missing. It is rebuilt from `requirements-lock.txt` (all 44 libraries at the exact tested versions) using the offline copy in `~/.local/wheels` - no internet needed. Nothing in it is precious: if a dashboard will not start, double-click `Repair Sales Review.command`. Do not delete `~/.local/wheels`. After a deliberate library upgrade, refresh both: `pip freeze --exclude-editable > requirements-lock.txt` and `pip download -r requirements-lock.txt -d ~/.local/wheels/sales_review_ho`.
 
 ## If it will not start
 - Look at `Sales Review/logs/ho_dashboard.log` (HO dashboard, port 8502) or `sales_dashboard.log` (port 8501) - the last lines show the error - and `dashboard_errors.log`.

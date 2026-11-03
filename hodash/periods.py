@@ -9,6 +9,7 @@ KINDS = ["Month", "Quarter", "Half-year", "YTD (Apr to month)", "Full year", "Cu
 
 
 def fy_label(fy: int, short=False) -> str:
+    if pd.isna(fy): return "-"
     fy = int(fy)
     return f"{(fy - 1) % 100:02d}-{fy % 100:02d}" if short else f"FY {fy - 1}-{fy % 100:02d}"
 
@@ -19,13 +20,14 @@ def mi_of(fy: int, fm: int) -> int:
 
 
 def mi_name(mi: int, with_year=True) -> str:
-    y, m = divmod(mi, 12)
+    if pd.isna(mi): return "-"                       # blank date in a sales file
+    y, m = divmod(int(mi), 12)                       # int(): mi can arrive as 24321.0
     n = calendar.month_abbr[m + 1]
     return f"{n}'{y % 100:02d}" if with_year else n
 
 
 def month_start(mi: int) -> pd.Timestamp:
-    y, m = divmod(mi, 12)
+    y, m = divmod(int(mi), 12)
     return pd.Timestamp(year=y, month=m + 1, day=1)
 
 
