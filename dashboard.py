@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from hodash import config as C, loader, metrics as M, ho_tables as H, pptx_export as X, pivot as PV, scheme_ui, ui, bazaar_ui, lrs_ui, premium_ui, review_letter_ui, upload as U, ho_deck as HD
+from hodash import config as C, loader, metrics as M, ho_tables as H, pptx_export as X, pivot as PV, scheme_ui, ui, bazaar_ui, lrs_ui, premium_ui, review_letter_ui, upload as U, ho_deck as HD, ignite_ui
 from hodash.version import VERSION, RELEASED
 from hodash.periods import KINDS, MONTHS, fy_label, make_period, mi_name
 
@@ -232,9 +232,12 @@ if wp["cy"].partial or ws["cy"].partial:
 for w_ in data.info["target_warnings"]:
     st.warning("Target file: " + w_)
 
-tab_ov, tab_bz, tab_rl, tab_lrs, tab_pri, tab_sec, tab_prem, tab_gap, tab_ins, tab_ex, tab_pv, tab_sch, tab_ppt, tab_data = st.tabs(
+tab_ov, tab_bz, tab_rl, tab_lrs, tab_pri, tab_sec, tab_prem, tab_gap, tab_ins, tab_ex, tab_pv, tab_sch, tab_ign, tab_ppt, tab_data = st.tabs(
     ["🏠 Overview", "🛒 Bazaar", "✉️ Review Letters", "📋 LRS Format", "🏭 Primary", "🚚 Secondary", "💎 Premium & Customers", "⚖️ Primary vs Secondary", "💡 Insights", "🔎 Explore",
-     "🧮 Pivot", "🎯 Schemes", "📑 PPT Studio", "🗂️ Data & checks"])
+     "🧮 Pivot", "🎯 Schemes", "🔥 Servo Ignite", "📑 PPT Studio", "🗂️ Data & checks"])
+
+with tab_ign, ui.guard("Servo Ignite"):
+    ignite_ui.render(pri_all, sec_all, pri_last, sec_last)
 
 with tab_prem, ui.guard("Premium & Customers"):
     premium_ui.render(sec_all, sec_last, ws["cy"], show)

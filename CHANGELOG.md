@@ -2,6 +2,10 @@
 
 The version is shown at the bottom of the sidebar and on the **Data & checks** tab (`hodash/version.py`).
 
+## v3.3.0 - 04-Nov-2026 - Servo Ignite calculator
+- New **🔥 Servo Ignite** tab (`hodash/ignite.py`, `ignite_ui.py`): circular HO/LUBES/RLS/2026-27/30, Oct-Dec'26. Five parameters per stockist, weightage, incentive so far / full quarter at run-rate / if all 5 met, lists of SKUs to bill, new counters and counter SKU counts, Excel download. Scheme values can be changed in Settings.
+- The Primary file has no invoice value, so rupee figures are estimates (litres x secondary Rs/L of the SKU) unless the SAP value is typed in, or a future export has a value column (read automatically).
+
 ## v3.2.1 - 03-Nov-2026 - works without AI or internet
 - `Repair Sales Review.command`: rebuilds both Python environments from the offline copy; puts the old one back if the rebuild fails.
 - `requirements-lock.txt` pins all 44 libraries (before: only the 8 main ones, so a rebuild could pick up untested versions). Offline copies in `~/.local/wheels/` (sales_review_ho, sales_master); launchers install from there first, internet only as fallback, and use Python 3.11 explicitly.

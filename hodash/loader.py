@@ -284,6 +284,8 @@ def norm_primary(raw: pd.DataFrame) -> pd.DataFrame:
     df["kl"] = _num_col(kl).fillna(0.0)
     nw = _col(raw, "Net Weight")                                   # SAP net weight of the line, in MT (used for MT figures)
     df["mt"] = _num_col(nw).fillna(0.0) if nw is not None else np.nan
+    val = _col(raw, "Net Value", "Net Val", "Net Amount", "Taxable Value", "Taxable Amount", "Basic Value", "Invoice Value")   # if the SAP export has it
+    df["value"] = _num_col(val) if val is not None else np.nan
     mat = pd.to_numeric(_col(raw, "Material"), errors="coerce").fillna(0).astype("int64")
     df["pcode"], df["pk"] = mat // 1000, mat % 1000
     df["product_raw"] = _col(raw, "Description") if _col(raw, "Description") is not None else mat.astype(str)
