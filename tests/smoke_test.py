@@ -25,6 +25,7 @@ def scenarios():
     yield "pack + category", {"sl_pack_group": "rarest", "sl_category": "rarest"}
     yield "premium tab: rare segment", {"pr_seg": "rarest"}
     yield "premium tab: HYPER series", {"pr_series": ["HYPER"]}
+    yield "not billed tab: Fleet + one stockist", {"nb_chan": ["Fleet"], "nb_stk": "first"}
     yield "PPT Studio: build HO deck (template)", {"click": "ppt_build"}
     yield "PPT Studio: build on filled deck", {"ppt_base": 1, "click": "ppt_build"}
     yield "premium tab: one customer + stockist", {"pr_cust": "first", "pr_stk": "last"}

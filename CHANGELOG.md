@@ -2,6 +2,9 @@
 
 The version is shown at the bottom of the sidebar and on the **Data & checks** tab (`hodash/version.py`).
 
+## v3.4.0 - 04-Nov-2026 - counters not billed
+- New **🔕 Not Billed** tab (`hodash/not_billed.py`): pick a date and see the counters with no bill on or after it, under any stockist, with last bill date, days since and earlier volume. Filters: channel (Bazaar by default), stockist, SSF, district, minimum earlier litres. Summary by SSF, Excel download.
+
 ## v3.3.0 - 04-Nov-2026 - Servo Ignite calculator
 - New **🔥 Servo Ignite** tab (`hodash/ignite.py`, `ignite_ui.py`): circular HO/LUBES/RLS/2026-27/30, Oct-Dec'26. Five parameters per stockist, weightage, incentive so far / full quarter at run-rate / if all 5 met, lists of SKUs to bill, new counters and counter SKU counts, Excel download. Scheme values can be changed in Settings.
 - The Primary file has no invoice value, so rupee figures are estimates (litres x secondary Rs/L of the SKU) unless the SAP value is typed in, or a future export has a value column (read automatically).
